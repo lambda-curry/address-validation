@@ -5,58 +5,85 @@ interface PostalCode {
   country: string;
   postalCode: string;
   city: string;
-  state: string;
-  stateCode: string;
-  county: string;
-  countyCode: string;
+  province: string;
+  provinceCode: string;
+  region: string;
+  regionCode: string;
   latitude: number | null;
   longitude: number | null;
   accuracy: number | null;
 }
 
-async function getUsCsvFile() {
-  console.log('Downloading ZIP file from geonames.org...');
-  const response = await fetch(
-    'https://download.geonames.org/export/zip/US.zip',
-  );
+interface ZipCodeFile {
+  country_code: string;
+  url: string;
+  fileName: string;
+}
+
+export const countries: ZipCodeFile[] = [
+  {
+    country_code: 'US',
+    url: 'https://download.geonames.org/export/zip/US.zip',
+    fileName: 'US.txt',
+  },
+  {
+    country_code: 'CA',
+    url: 'https://download.geonames.org/export/zip/CA.zip',
+    fileName: 'CA.txt',
+  },
+  {
+    country_code: 'MX',
+    url: 'https://download.geonames.org/export/zip/MX.zip',
+    fileName: 'MX.txt',
+  },
+];
+
+async function getCsvFile({
+  url,
+  fileName,
+}: { url: string; fileName: string }) {
+  console.log(`Downloading ZIP file from ${url}...`);
+  const response = await fetch(url);
 
   if (!response.ok)
     throw new Error(`Failed to download ZIP file: ${response.statusText}`);
 
   const zipBuffer = await response.arrayBuffer();
 
-  console.log('Extracting US.txt from ZIP...');
+  console.log(`Extracting ${fileName} from ZIP...`);
 
   const zip = new JSZip();
   await zip.loadAsync(zipBuffer);
 
-  const usTxtFile = zip.file('US.txt');
-  if (!usTxtFile) {
-    throw new Error('US.txt not found in ZIP file');
-  }
+  const file = zip.file(fileName);
+  if (!file) throw new Error(`${fileName} not found in ZIP file`);
 
-  return await usTxtFile.async('text');
+  return await file.async('text');
 }
 
-async function importData(db: D1Database) {
-  // Create the table if it doesn't exist
-  await db.exec(
-    'CREATE TABLE IF NOT EXISTS postal_codes (' +
-      'country TEXT, ' +
-      'postal_code TEXT, ' +
-      'city TEXT, ' +
-      'state TEXT, ' +
-      'state_code TEXT, ' +
-      'county TEXT, ' +
-      'county_code TEXT, ' +
-      'latitude REAL, ' +
-      'longitude REAL, ' +
-      'accuracy INTEGER, ' +
-      'PRIMARY KEY (postal_code)' +
-      ')',
-  );
+async function importCountryData(db: D1Database, country: ZipCodeFile) {
+  try {
+    await db.exec(
+      'CREATE TABLE IF NOT EXISTS postal_codes (' +
+        'country TEXT, ' +
+        'postal_code TEXT, ' +
+        'city TEXT, ' +
+        'province TEXT, ' +
+        'province_code TEXT, ' +
+        'region TEXT, ' +
+        'region_code TEXT, ' +
+        'latitude REAL, ' +
+        'longitude REAL, ' +
+        'accuracy INTEGER, ' +
+        'PRIMARY KEY (postal_code, country)' +
+        ')',
+    );
+  } catch (error) {
+    console.error('Error creating table', error);
+    throw error;
+  }
 
-  const csvContent = await getUsCsvFile();
+  const csvContent = await getCsvFile(country);
 
   const lines = csvContent.split('\n');
 
@@ -69,7 +96,7 @@ async function importData(db: D1Database) {
 
     const parts = line.split('\t');
     if (parts.length < 10) {
-      console.log(`Skipping invalid line: ${line}`);
+      // console.log(`Skipping invalid line: ${line}`);
       continue;
     }
 
@@ -77,10 +104,10 @@ async function importData(db: D1Database) {
       country,
       postalCode,
       city,
-      state,
-      stateCode,
-      county,
-      countyCode,
+      province,
+      provinceCode,
+      region,
+      regionCode,
       latitude,
       longitude,
       accuracy,
@@ -90,12 +117,12 @@ async function importData(db: D1Database) {
       !country ||
       !postalCode ||
       !city ||
-      !state ||
-      !stateCode ||
-      !county ||
-      !countyCode
+      !province ||
+      !provinceCode ||
+      !region ||
+      !regionCode
     ) {
-      console.log(`Skipping line with missing data: ${line}`);
+      // console.log(`Skipping line with missing data: ${line}`);
       continue;
     }
 
@@ -103,20 +130,19 @@ async function importData(db: D1Database) {
       country,
       postalCode,
       city,
-      state,
-      stateCode,
-      county,
-      countyCode,
+      province,
+      provinceCode,
+      region,
+      regionCode,
       latitude: latitude ? Number.parseFloat(latitude) : null,
       longitude: longitude ? Number.parseFloat(longitude) : null,
       accuracy: accuracy ? Number.parseInt(accuracy) : null,
     });
   }
-  console.log(`Total valid records to insert: ${values.length}`);
 
   // Process in chunks of 100 for comparison
   const chunkSize = 1000;
-  const updateBatchSize = 100;
+  const updateBatchSize = 300;
 
   for (let i = 0; i < values.length; i += chunkSize) {
     const chunk = values.slice(i, i + chunkSize);
@@ -159,13 +185,13 @@ async function importData(db: D1Database) {
       const values = batch
         .map(
           (v) => `(
-        '${v.country.replace(/'/g, "''")}',
-        '${v.postalCode.replace(/'/g, "''")}',
+        '${v.country.replace(/'/g, "''").toUpperCase()}',
+        '${v.postalCode.replace(/'/g, "''").toUpperCase()}',
         '${v.city.replace(/'/g, "''")}',
-        '${v.state.replace(/'/g, "''")}',
-        '${v.stateCode.replace(/'/g, "''")}',
-        '${v.county.replace(/'/g, "''")}',
-        '${v.countyCode.replace(/'/g, "''")}',
+        '${v.province.replace(/'/g, "''")}',
+        '${v.provinceCode.replace(/'/g, "''")}',
+        '${v.region.replace(/'/g, "''")}',
+        '${v.regionCode.replace(/'/g, "''")}',
         ${!v.latitude ? 'NULL' : v.latitude},
         ${!v.longitude ? 'NULL' : v.longitude},
         ${!v.accuracy ? 'NULL' : v.accuracy}
@@ -176,12 +202,18 @@ async function importData(db: D1Database) {
       await db
         .prepare(`
         INSERT OR REPLACE INTO postal_codes
-        (country, postal_code, city, state, state_code, county, county_code, latitude, longitude, accuracy)
+        (country, postal_code, city, province, province_code, region, region_code, latitude, longitude, accuracy)
         VALUES ${values}
       `)
         .run();
     }
   }
+}
+
+async function importData(db: D1Database, country_code: string) {
+  const country = countries.find((c) => c.country_code === country_code);
+  if (!country) throw new Error(`Country ${country_code} not found`);
+  await importCountryData(db, country);
 }
 
 export { importData };

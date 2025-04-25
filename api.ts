@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { Resource } from 'sst';
-import { importData } from './import-data';
+import { countries } from './import-data';
 
 const app = new Hono();
 
@@ -18,19 +18,16 @@ app.use('*', async (c, next) => {
 app.get('/', (c) => c.text('Hello World'));
 
 app.post('/init', async (c) => {
-  const db = Resource.AddressValidationDB;
-  try {
-    await importData(db);
-    return c.json({ message: 'Data import completed' });
-  } catch (error: unknown) {
-    return c.json(
-      {
-        error: 'Failed to import data',
-        details: error instanceof Error ? error.message : String(error),
-      },
-      500,
-    );
+  for (const country of countries) {
+    try {
+      // @ts-ignore
+      await c.env.ImportWorker.importCountryData(country.country_code);
+    } catch (error) {
+      console.error(error);
+    }
   }
+
+  return c.json({ message: 'Data imported' });
 });
 
 app.get('/postal-code/:code', async (c) => {
