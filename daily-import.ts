@@ -1,6 +1,6 @@
 import { countries } from './import-data';
 
-export type ENV = {
+type ENV = {
   ImportWorker: {
     importCountryData: (country_code: string) => Promise<void>;
   };

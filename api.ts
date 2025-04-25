@@ -2,7 +2,13 @@ import { Hono } from 'hono';
 import { Resource } from 'sst';
 import { countries } from './import-data';
 
-const app = new Hono();
+type ENV = {
+  ImportWorker: {
+    importCountryData: (country_code: string) => Promise<void>;
+  };
+};
+
+const app = new Hono<{ Bindings: ENV }>();
 
 // API key validation middleware
 app.use('*', async (c, next) => {
@@ -20,7 +26,6 @@ app.get('/', (c) => c.text('Hello World'));
 app.post('/init', async (c) => {
   for (const country of countries) {
     try {
-      // @ts-ignore
       await c.env.ImportWorker.importCountryData(country.country_code);
     } catch (error) {
       console.error(error);
