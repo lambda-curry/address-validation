@@ -14,6 +14,30 @@ interface PostalCode {
   accuracy: number | null;
 }
 
+async function getUsCsvFile() {
+  console.log('Downloading ZIP file from geonames.org...');
+  const response = await fetch(
+    'https://download.geonames.org/export/zip/US.zip',
+  );
+
+  if (!response.ok)
+    throw new Error(`Failed to download ZIP file: ${response.statusText}`);
+
+  const zipBuffer = await response.arrayBuffer();
+
+  console.log('Extracting US.txt from ZIP...');
+
+  const zip = new JSZip();
+  await zip.loadAsync(zipBuffer);
+
+  const usTxtFile = zip.file('US.txt');
+  if (!usTxtFile) {
+    throw new Error('US.txt not found in ZIP file');
+  }
+
+  return await usTxtFile.async('text');
+}
+
 async function importData(db: D1Database) {
   // Create the table if it doesn't exist
   await db.exec(
@@ -32,31 +56,10 @@ async function importData(db: D1Database) {
       ')',
   );
 
-  // Download the ZIP file from geonames.org
-  console.log('Downloading ZIP file from geonames.org...');
-  const response = await fetch(
-    'https://download.geonames.org/export/zip/US.zip',
-  );
-  if (!response.ok) {
-    throw new Error(`Failed to download ZIP file: ${response.statusText}`);
-  }
+  const csvContent = await getUsCsvFile();
 
-  // Get the ZIP file as an ArrayBuffer
-  const zipBuffer = await response.arrayBuffer();
+  const lines = csvContent.split('\n');
 
-  // Extract the US.txt file from the ZIP
-  console.log('Extracting US.txt from ZIP...');
-  const zip = new JSZip();
-  await zip.loadAsync(zipBuffer);
-
-  const usTxtFile = zip.file('US.txt');
-  if (!usTxtFile) {
-    throw new Error('US.txt not found in ZIP file');
-  }
-
-  // Get the content of US.txt
-  const fileContent = await usTxtFile.async('text');
-  const lines = fileContent.split('\n');
   console.log(`Total lines in file: ${lines.length}`);
 
   // Prepare the data for batch insert
