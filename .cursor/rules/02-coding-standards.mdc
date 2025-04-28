@@ -1,0 +1,36 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Coding Standards
+
+## TypeScript Guidelines
+- Use TypeScript for all new code
+- Prefer interfaces over types for object definitions
+- Use explicit typing; avoid `any` and `unknown` types
+- Import types explicitly: `import type { ComponentType } from 'package'`
+
+## Code Style
+- Use functional programming patterns; avoid classes
+- Use arrow functions for consistency
+- Prefer const over let; avoid var
+- Use descriptive variable names with auxiliary verbs (e.g., isLoading, hasError)
+- Keep functions small and focused on a single responsibility
+
+## Naming Conventions
+- Use camelCase for variables and functions
+- Use PascalCase for types and interfaces
+- Use lowercase with dashes for file names
+- Export named functions/variables instead of using default exports
+
+## Error Handling
+- Use typed error handling with custom error classes
+- Always handle promise rejections
+- Provide meaningful error messages
+
+## Code Organization
+- Group related functionality in dedicated files
+- Keep file size manageable (< 200 lines as a guideline)
+- Use clear separation of concerns between API, business logic, and data access
+

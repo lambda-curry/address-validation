@@ -1,14 +1,10 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { z } from 'zod';
-import { SSETransport } from './sse';
+import type { SSETransport } from './sse';
 import { toolRegistry, registerAllTools } from './tools';
 import type { Context } from 'hono';
-import { zodToJsonSchema } from 'zod-to-json-schema';
-import type { JsonSchema7Type } from 'zod-to-json-schema';
 import {
   ListToolsRequestSchema,
   CallToolRequestSchema,
-  type CallToolRequest,
 } from '@modelcontextprotocol/sdk/types.js';
 
 /**
@@ -16,12 +12,15 @@ import {
  */
 export class MCPService {
   private mcpServer_: Server;
-  private ready: boolean = false;
+  private ready = false;
   private initPromise: Promise<void> | null = null;
 
   constructor() {
     // Initialize the MCP server
-    this.mcpServer_ = new Server({ name: 'Address Validation MCP Server', version: '1.0.0' }, { capabilities: { tools: {} } });
+    this.mcpServer_ = new Server(
+      { name: 'Address Validation MCP Server', version: '1.0.0' },
+      { capabilities: { tools: {} } },
+    );
   }
 
   /**
@@ -44,7 +43,9 @@ export class MCPService {
         this.ready = true;
         console.log('[MCP] Server initialization complete');
       } catch (error) {
-        console.error(`[MCP] Failed to initialize server: ${error instanceof Error ? error.message : String(error)}`);
+        console.error(
+          `[MCP] Failed to initialize server: ${error instanceof Error ? error.message : String(error)}`,
+        );
         throw error;
       }
     })();
@@ -63,15 +64,14 @@ export class MCPService {
     }
 
     // Build a mapping of tool names to their JSON Schema for capabilities
+    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
     const schemaMap: Record<string, any> = {};
-    tools.forEach((tool) => {
+    // biome-ignore lint/complexity/noForEach: <explanation>
+    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+    tools.forEach((tool: any) => {
       // Use the raw inputSchema (already JSON Schema) for registration
       const schemaObj = tool.inputSchema;
       schemaMap[tool.name] = schemaObj;
-      console.log(
-        `Syncing tool ${tool.name} with schema:`,
-        // schemaObj
-      );
     });
 
     // Ensure clients get the full JSON Schema back
@@ -84,14 +84,19 @@ export class MCPService {
     }));
 
     // Wire the same registry up for tool execution
-    this.mcpServer_.setRequestHandler(CallToolRequestSchema, async ({ params }) => {
-      const tool = tools.find((t) => t.name === params.name);
-      if (!tool) throw new Error(`Tool '${params.name}' not found`);
-      return tool.handler(params.arguments);
-    });
+    this.mcpServer_.setRequestHandler(
+      CallToolRequestSchema,
+      async ({ params }) => {
+        const tool = tools.find((t) => t.name === params.name);
+        if (!tool) throw new Error(`Tool '${params.name}' not found`);
+        return tool.handler(params.arguments);
+      },
+    );
 
     // Populate the MCP server's advertised capabilities with JSON Schema definitions
+    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
     if ((this.mcpServer_ as any).capabilities) {
+      // biome-ignore lint/suspicious/noExplicitAny: <explanation>
       (this.mcpServer_ as any).capabilities.tools = schemaMap;
     }
     console.log(`[MCP] Synchronized ${tools.length} tools with MCP server`);

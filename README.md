@@ -24,8 +24,12 @@ This repository contains an MCP (Model Context Protocol) server for the Address 
 2. Install dependencies:
 
 ```bash
-npm install
+bun install && npx sst dev
 ```
+Notes:
+You'll need to sst add a secret with your API_KEY to your stage: `sst secret set API_KEY apikeyvalue --stage=stagename`
+You'll need to curl and post to the init endpoint to download the data files.
+
 
 3. Create a `.env` file based on `.env.example`:
 
@@ -33,99 +37,8 @@ npm install
 cp .env.example .env
 ```
 
-4. Update the `.env` file with your API key.
+This project was created using `bun init` in bun v1.2.10. [Bun](https://bun.sh) is a fast all-in-one JavaScript runtime.
 
-### Running the Server
+## Reference
 
-Start the development server:
-
-```bash
-npm run dev
-```
-
-This will start the MCP server on port 4200 and launch the MCP Inspector.
-
-## API Endpoints
-
-- `GET /health`: Health check endpoint
-- `GET /sse`: SSE endpoint for MCP communication
-- `POST /messages`: Message handling endpoint
-
-## MCP Tools
-
-### getPostalCodeInfo
-
-Get information about a postal code.
-
-**Input Schema:**
-```json
-{
-  "postalCode": "string"
-}
-```
-
-**Example:**
-```json
-{
-  "jsonrpc": "2.0",
-  "method": "callTool",
-  "params": {
-    "name": "getPostalCodeInfo",
-    "arguments": {
-      "postalCode": "10001"
-    }
-  },
-  "id": "1"
-}
-```
-
-### getPostalInfo
-
-Get information about a postal code in a specific country.
-
-**Input Schema:**
-```json
-{
-  "postalCode": "string",
-  "countryCode": "string"
-}
-```
-
-**Example:**
-```json
-{
-  "jsonrpc": "2.0",
-  "method": "callTool",
-  "params": {
-    "name": "getPostalInfo",
-    "arguments": {
-      "postalCode": "10001",
-      "countryCode": "US"
-    }
-  },
-  "id": "1"
-}
-```
-
-## Cursor Integration
-
-To use the MCP server with Cursor, add the following to your `.cursor/mcp.json` file:
-
-```json
-{
-  "mcpServers": {
-    "address-validation-mcp-server": {
-      "command": "npx",
-      "args": ["mcp-remote", "http://localhost:4200/sse"]
-    }
-  }
-}
-```
-
-## Documentation
-
-For more detailed documentation, see [docs/hono-mcp-server.md](docs/hono-mcp-server.md).
-
-## License
-
-This project is licensed under the MIT License.
+- [MCP Server Setup Guide](docs/hono-mcp-server.md)

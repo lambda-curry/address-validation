@@ -1,12 +1,13 @@
 {
   "name": "address-validation-api",
-  "module": "index.ts",
+  "module": "api.ts",
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "ts-node --project tsconfig.json src/index.ts & npx -y @modelcontextprotocol/inspector proxy http://localhost:4200/sse",
-    "build": "tsc",
-    "start": "node dist/index.js"
+    "start": "bun run --watch api.ts",
+    "dev": "sst dev",
+    "build": "sst build",
+    "deploy": "sst deploy"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
@@ -31,5 +32,6 @@
     "uuid": "^11.1.0",
     "zod": "^3.24.2",
     "zod-to-json-schema": "^3.22.5"
-  }
+  },
+  "packageManager": "yarn@3.7.0+sha512.c0bef4cb2a32230b4baa5cab387b4051b47f6242ca8e2b3f9dbf3b7a3d0c729efb4bff872f753b977b2788e4a9a4af30bfc663885de15af1fde122ed0a268810"
 }

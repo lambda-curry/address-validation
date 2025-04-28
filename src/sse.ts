@@ -1,6 +1,9 @@
-import { SSEStreamingApi } from 'hono/streaming';
+import type { SSEStreamingApi } from 'hono/streaming';
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
-import { JSONRPCMessage, JSONRPCMessageSchema } from '@modelcontextprotocol/sdk/types.js';
+import {
+  type JSONRPCMessage,
+  JSONRPCMessageSchema,
+} from '@modelcontextprotocol/sdk/types.js';
 import type { Context } from 'hono';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -59,7 +62,9 @@ export class SSETransport implements Transport {
         data: JSON.stringify(message),
       });
     } catch (error) {
-      console.error(`Error sending SSE message: ${error instanceof Error ? error.message : String(error)}`);
+      console.error(
+        `Error sending SSE message: ${error instanceof Error ? error.message : String(error)}`,
+      );
       throw error;
     }
   }
@@ -78,7 +83,10 @@ export class SSETransport implements Transport {
         throw new Error(`Unsupported content-type: ${contentType}`);
       }
 
-      const contentLength = Number.parseInt(c.req.header('content-length') || '0', 10);
+      const contentLength = Number.parseInt(
+        c.req.header('content-length') || '0',
+        10,
+      );
       if (contentLength > MAXIMUM_MESSAGE_SIZE) {
         throw new Error(`Request body too large: ${contentLength} bytes`);
       }
@@ -87,7 +95,9 @@ export class SSETransport implements Transport {
       await this.handleMessage(body);
       return c.json({ status: 'ok' });
     } catch (error) {
-      console.error(`Error handling POST message: ${error instanceof Error ? error.message : String(error)}`);
+      console.error(
+        `Error handling POST message: ${error instanceof Error ? error.message : String(error)}`,
+      );
       this.onerror?.(error as Error);
       return c.text('Error processing message', 500);
     }
@@ -101,7 +111,9 @@ export class SSETransport implements Transport {
       const parsedMessage = JSONRPCMessageSchema.parse(message);
       this.onmessage?.(parsedMessage);
     } catch (error) {
-      console.error(`Error parsing message: ${error instanceof Error ? error.message : String(error)}`);
+      console.error(
+        `Error parsing message: ${error instanceof Error ? error.message : String(error)}`,
+      );
       this.onerror?.(error as Error);
     }
   }

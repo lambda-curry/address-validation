@@ -40,10 +40,12 @@ app.get('/postal-code/:code', async (c) => {
   const db = Resource.AddressValidationDB;
 
   const result = await db
-    .prepare(`
+    .prepare(
+      `
     SELECT * FROM postal_codes 
     WHERE postal_code = ?
-  `)
+  `,
+    )
     .bind(postalCode)
     .first();
 
@@ -70,10 +72,12 @@ app.get('/postal-info', async (c) => {
   }
 
   const result = await db
-    .prepare(`
+    .prepare(
+      `
     SELECT * FROM postal_codes 
     WHERE postal_code = ? AND country = ?
-  `)
+  `,
+    )
     .bind(postalCode.toUpperCase(), countryCode.toUpperCase())
     .first();
 

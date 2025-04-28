@@ -1,142 +1,139 @@
-# Hono MCP Server for Address Validation API
+# Hono MCP Server Setup Guide
 
-This document outlines how to create a simple MCP (Model Context Protocol) server using Hono for the Address Validation API.
+This document serves as the single source of truth for setting up, developing, and maintaining an MCP (Model Context Protocol) server using Hono, with a focus on SSE (Server-Sent Events) transport, tooling, and dev workflow. Use this as a reference for future repositories and onboarding.
 
-## What is MCP?
+---
 
-The Model Context Protocol (MCP) is a standardized way for AI models to interact with external tools and services. It allows AI models to access real-time data and perform actions in the world through a consistent interface.
-
-MCP servers expose tools as JSON-RPC endpoints that AI models can call to perform specific tasks.
-
-## Project Structure
-
-The Address Validation MCP server is structured as follows:
+## 1. File/Folder Layout
 
 ```
-src/
-  ├── index.ts           # Main entry point
-  ├── mcp.ts             # MCP service implementation
-  ├── routes.ts          # API routes
-  ├── sse.ts             # Server-Sent Events transport
-  └── tools/
-      ├── index.ts       # Tool registry
-      ├── registry.ts    # Tool registration
-      ├── types.ts       # Tool type definitions
-      └── postal-tools.ts # Postal code validation tools
+/mcp/
+  routes.ts         # Route definitions: health, SSE, JSON-RPC
+  mcp.ts            # MCP server wrapper, tool registry, helpers
+  /tools/           # Tool definitions and registry
+  sse.ts            # Custom SSETransport bridging MCP <-> browser EventSource
+  registry.ts       # In-memory tool registry abstraction
 ```
 
-## Setting Up the MCP Server
+### Example Route Handlers
 
-### 1. Install Dependencies
-
-```bash
-npm install @modelcontextprotocol/sdk @modelcontextprotocol/inspector hono @hono/node-server zod uuid
+```ts
+// routes.ts
+router.get('/health', healthHandler)
+router.get('/sse', sseHandler)
+router.post('/messages', messagesHandler)
 ```
 
-### 2. Configure the Server
+---
 
-Create a `.env` file with your API key:
+## 2. Boot Sequence
 
-```
-API_KEY=your_api_key_here
-```
+- `bun dev` starts the dev server (e.g., `sst dev`)
+- `index.ts` creates a Hono instance, mounts CORS and logging middleware
+- `/sse` route:
+  - Generates a `sessionId` (UUID)
+  - Writes initial event: endpoint so the client knows where to POST `/messages?sessionId=...`
+  - Hands off to `SSETransport`
+- `mcpService.init()` loads OpenAPI-derived tools and registers them with the MCP Server
+- Client communicates via JSON-RPC over the SSE transport
 
-### 3. Implement the MCP Server
+### Example Boot Code
 
-The MCP server consists of several components:
+```ts
+import { Hono } from 'hono';
+import { SSETransport } from './sse';
+import { mcpService } from './mcp';
 
-- **Main Entry Point**: Sets up the Hono application and server
-- **MCP Service**: Manages tool registration and connections
-- **SSE Transport**: Handles Server-Sent Events for real-time communication
-- **Tool Registry**: Manages available tools
-- **Routes**: Defines API endpoints
+const app = new Hono();
 
-## Implementing Address Validation Tools
+app.get('/sse', (c) => SSETransport.handle(c));
+app.post('/messages', (c) => mcpService.handleMessage(c));
 
-The Address Validation API provides two main endpoints:
-
-1. `GET /postal-code/:code` - Get postal code information by code
-2. `GET /postal-info?postal_code=X&country_code=Y` - Get postal code information by code and country
-
-We'll implement MCP tools that wrap these endpoints:
-
-### Tool Implementation
-
-Tools are defined with:
-- Name
-- Description
-- Input schema (using Zod or JSON Schema)
-- Handler function
-
-Example:
-
-```typescript
-// Tool definition
-{
-  name: "getPostalCodeInfo",
-  description: "Get information about a postal code",
-  inputSchema: z.object({
-    postalCode: z.string().describe("The postal code to look up")
-  }),
-  handler: async (params) => {
-    // Implementation
-  }
-}
+mcpService.init();
 ```
 
-## Running the MCP Server
+---
 
-To run the server:
+## 3. Creating Your Own Hono MCP Server (Checklist)
 
-```bash
-npm run dev
+- Install dependencies:
+  ```sh
+  npm install hono @hono/node-server @modelcontextprotocol/sdk zod
+  ```
+- Implement `SSETransport` (see [SSE docs](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events))
+- Build an `MCPService` thin wrapper around the SDK server:
+  ```ts
+  import { Server } from '@modelcontextprotocol/sdk/server';
+  const server = new Server({ name: 'My MCP' }, { capabilities: { tools: {} } });
+  server.setRequestHandler(CallToolRequestSchema, ...);
+  ```
+- Load/define tools (manually or via a service like [openapi2mcptools](https://www.npmjs.com/package/openapi2mcptools))
+- Expose endpoints:
+  - `GET /health` for ops
+  - `GET /sse` for streaming
+  - `POST /messages` for JSON-RPC
+- Set important env vars (example `.dev.vars`):
+  ```env
+  MEDUSA_SECRET_KEY=sk_...
+  MEDUSA_API_URL=http://localhost:9000
+  PORT=4200
+  ```
+- Run with:
+  ```sh
+  NODE_OPTIONS='--loader ts-node/esm' ts-node src/index.ts
+  # or build with tsc
+  ```
+
+---
+
+## 4. Local Dev / Debugging Tips
+
+- Use [@modelcontextprotocol/inspector](https://www.npmjs.com/package/@modelcontextprotocol/inspector) proxy at `http://localhost:4200/sse` to inspect traffic
+- Hono's dev server reloads if you pair with `tsx watch` or similar
+- Add `?sessionId=...` query param logging for easier correlation in logs
+- Use descriptive logging for SSE events and tool invocations
+
+---
+
+## 5. Further Reading / References
+
+- [Hono Documentation](https://hono.dev)
+- [Model Context Protocol Spec](https://github.com/modelcontext/protocol)
+- [MCP SDK Server Package](https://github.com/modelcontext/sdk/tree/main/packages/server)
+- [openapi2mcptools](https://www.npmjs.com/package/openapi2mcptools)
+- [Inspector CLI](https://www.npmjs.com/package/@modelcontextprotocol/inspector)
+
+---
+
+## Example: Minimal Hono MCP Server
+
+```ts
+import { Hono } from 'hono';
+import { Server } from '@modelcontextprotocol/sdk/server';
+import { SSETransport } from './sse';
+
+const app = new Hono();
+const mcpServer = new Server({ name: 'Example MCP' }, { capabilities: { tools: {} } });
+
+app.get('/health', (c) => c.json({ status: 'ok', env: process.env.NODE_ENV }));
+app.get('/sse', (c) => SSETransport.handle(c, mcpServer));
+app.post('/messages', async (c) => {
+  const payload = await c.req.json();
+  return mcpServer.handleMessage(payload);
+});
+
+export default app;
 ```
 
-The server will be available at http://localhost:4200 with the following endpoints:
+---
 
-- `/sse` - SSE endpoint for MCP communication
-- `/health` - Health check endpoint
-- `/messages` - Message handling endpoint
+## SSE Transport: Key Concepts
 
-## Testing with the MCP Inspector
+- Use EventSource-compatible responses for browser clients
+- Generate a unique sessionId per connection
+- Send initial event with endpoint info for client POSTs
+- Bridge between MCP server and browser using custom logic
 
-You can test your MCP server using the MCP Inspector:
+---
 
-```bash
-npx @modelcontextprotocol/inspector proxy http://localhost:4200/sse
-```
-
-This will open a web interface where you can test your tools.
-
-## Example Usage
-
-Here's how an AI model would use the postal code validation tools:
-
-```json
-{
-  "jsonrpc": "2.0",
-  "method": "callTool",
-  "params": {
-    "name": "getPostalCodeInfo",
-    "arguments": {
-      "postalCode": "10001"
-    }
-  },
-  "id": "1"
-}
-```
-
-## Cursor Configuration
-
-To use the MCP server with Cursor, add the following to your `.cursor/mcp.json` file:
-
-```json
-{
-  "mcpServers": {
-    "address-validation-mcp-server": {
-      "command": "npx",
-      "args": ["mcp-remote", "http://localhost:4200/sse"]
-    }
-  }
-}
-```
+_Last updated: 2025-04-27_ 

@@ -1,8 +1,0 @@
-{
-  "mcpServers": {
-    "address-validation-mcp-server": {
-      "command": "npx",
-      "args": ["mcp-remote", "http://localhost:4200/sse"]
-    }
-  }
-}

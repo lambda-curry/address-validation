@@ -40,3 +40,8 @@ build/
 # OS files
 .DS_Store
 Thumbs.db
+
+.sst
+.wrangler
+sst-env.d.ts
+.build
