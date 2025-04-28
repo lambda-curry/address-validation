@@ -1,0 +1,20 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Project Overview
+
+This is an address validation service built with TypeScript and Bun. The project uses SST (Serverless Stack) for infrastructure and deployment.
+
+## Key Files
+- [api.ts](mdc:api.ts) - Main API endpoints and handlers
+- [import-data.ts](mdc:import-data.ts) - Data import functionality
+- [import-worker.ts](mdc:import-worker.ts) - Worker process for data imports
+- [sst.config.ts](mdc:sst.config.ts) - SST infrastructure configuration
+
+## Project Configuration
+- [tsconfig.json](mdc:tsconfig.json) - TypeScript configuration
+- [biome.json](mdc:biome.json) - Biome (formatting/linting) configuration
+- [package.json](mdc:package.json) - Project dependencies and scripts
+

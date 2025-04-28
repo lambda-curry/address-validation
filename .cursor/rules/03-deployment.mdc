@@ -1,0 +1,27 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Deployment and Infrastructure
+
+## SST Configuration
+The project uses SST (Serverless Stack) for infrastructure, defined in [sst.config.ts](mdc:sst.config.ts).
+
+## Development
+- Use `bun run dev` for local development
+- The development environment uses local emulation of AWS services
+- API endpoints are available locally during development
+
+## Deployment Process
+- Main branch deployments are automated
+- Infrastructure changes must be reviewed
+- Follow the principle of infrastructure as code
+- All infrastructure changes must be made through SST configuration
+
+## Environment Variables
+- Never commit sensitive values to the repository
+- Use SST's Secret management for sensitive values
+- Local development uses .env files (not committed to repo)
+
+
