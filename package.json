@@ -3,18 +3,33 @@
   "module": "index.ts",
   "type": "module",
   "private": true,
+  "scripts": {
+    "dev": "ts-node --project tsconfig.json src/index.ts & npx -y @modelcontextprotocol/inspector proxy http://localhost:4200/sse",
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
     "@cloudflare/workers-types": "^4.20250424.0",
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "@types/node": "^22.14.0",
+    "@types/uuid": "^9.0.8",
+    "ts-node": "^10.9.2"
   },
   "peerDependencies": {
     "typescript": "^5.8.3"
   },
   "dependencies": {
+    "@hono/node-server": "^1.14.1",
+    "@modelcontextprotocol/inspector": "^0.10.2",
+    "@modelcontextprotocol/sdk": "^1.4.1",
     "cloudflare": "^4.2.0",
+    "dotenv": "^16.5.0",
     "hono": "^4.7.7",
     "jszip": "^3.10.1",
-    "sst": "^3.13.17"
+    "sst": "^3.13.17",
+    "uuid": "^11.1.0",
+    "zod": "^3.24.2",
+    "zod-to-json-schema": "^3.22.5"
   }
 }
