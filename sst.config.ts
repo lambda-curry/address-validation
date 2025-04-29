@@ -1,7 +1,5 @@
 /// <reference path="./.sst/platform/config.d.ts" />
 
-console.log('📜  sst.config.ts – TOP');
-
 export default $config({
   app(input) {
     console.log('🚀  inside app()');
@@ -16,25 +14,10 @@ export default $config({
     const API_KEY = new sst.Secret('API_KEY');
     const database = new sst.cloudflare.D1('AddressValidationDB');
 
-    const saferBufferAlias = {
-      build: {
-        esbuild: {
-          alias: { 'safer-buffer': 'node:buffer' },
-        },
-      },
-    };
-
     const importWorker = new sst.cloudflare.Worker('ImportWorker', {
       url: false,
       link: [database],
       handler: 'src/import-worker.ts',
-      transform: {
-        worker: {
-          compatibilityDate: '2025-04-28',
-          compatibilityFlags: ['nodejs_compat_v2'],
-        },
-      },
-      ...saferBufferAlias,
     });
 
     const binding = sst.cloudflare.binding({
@@ -49,13 +32,6 @@ export default $config({
       job: {
         link: [database, API_KEY, importWorker, binding],
         handler: 'src/daily-import.ts',
-        transform: {
-          worker: {
-            compatibilityDate: '2025-04-28',
-            compatibilityFlags: ['nodejs_compat_v2'],
-          },
-        },
-        ...saferBufferAlias,
       },
     });
 
@@ -63,17 +39,10 @@ export default $config({
       url: true,
       link: [database, API_KEY, importWorker, binding],
       handler: 'src/api.ts',
-      transform: {
-        worker: {
-          compatibilityDate: '2025-04-28',
-          compatibilityFlags: ['nodejs_compat_v2'],
-        },
-      },
       domain:
         $app.stage === 'production'
           ? 'address-validation.lambdacurry.dev'
           : undefined,
-      ...saferBufferAlias,
     });
 
     return {

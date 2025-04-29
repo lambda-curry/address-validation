@@ -1,0 +1,35 @@
+name = "address-validation-api-mcp" # Can be different from SST app name, focuses on DO deployment
+compatibility_date = "2024-04-29" # Add a compatibility date
+main = "src/mcp/session-do.ts" # Point main to the DO script (now an ES module)
+# Remove main entry point - SST handles the main worker deployment
+# main = "src/mcp/session-do.ts" 
+# compatibility_date = "YYYY-MM-DD" # Set your desired compatibility date
+
+[durable_objects]
+# Define the binding name used in Worker code (c.env.MCP_SESSION_DO) 
+# and the class name exported from the script.
+bindings = [
+  { name = "MCP_SESSION_DO", class_name = "MCPSession" }
+]
+
+[[migrations]]
+tag = "v1" # Initial migration tag
+# List the NEW Durable Object classes being introduced in this migration.
+new_classes = ["MCPSession"]
+
+# IMPORTANT: 
+# This wrangler.toml primarily defines the DO. 
+# SST still manages the main worker deployment ('Hono' in sst.config.ts).
+# If the DO script ('src/mcp/session-do.ts') needs bindings (like D1, secrets),
+# they need to be configured here as well for `wrangler deploy` to work correctly,
+# or passed via fetch requests from the main worker.
+# For simplicity, we'll assume they are passed or not needed directly by the DO for now.
+# Example D1 binding for wrangler (if needed):
+# [[d1_databases]]
+# binding = "DB" # How the DO accesses it (env.DB)
+# database_name = "AddressValidationDB" 
+# database_id = "YOUR_D1_DB_ID" # Find this in Cloudflare dashboard or SST output
+
+# Example secrets (if needed directly by DO):
+# [vars]
+# API_KEY = "placeholder" 

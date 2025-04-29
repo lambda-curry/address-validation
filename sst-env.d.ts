@@ -18,6 +18,7 @@ declare module "sst" {
   export interface Resource {
     "AddressValidationDB": cloudflare.D1Database
     "DailyImportCronHandler": cloudflare.Service
+    "Hono": cloudflare.Service
     "ImportWorker": cloudflare.Service
   }
 }

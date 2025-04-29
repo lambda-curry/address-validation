@@ -7,7 +7,7 @@ export type ToolResponseContentItem = {
   type: 'text' | 'image' | 'json';
   text?: string;
   image_url?: string;
-  json?: any;
+  json?: unknown;
 };
 
 /**
@@ -21,7 +21,7 @@ export type ToolResponse = {
 /**
  * Tool handler function
  */
-export type ToolHandler = (params: any) => Promise<ToolResponse>;
+export type ToolHandler = (params: unknown) => Promise<ToolResponse>;
 
 /**
  * Tool definition
@@ -29,7 +29,7 @@ export type ToolHandler = (params: any) => Promise<ToolResponse>;
 export type ToolDefinition = {
   name: string;
   description: string;
-  inputSchema: any;
+  inputSchema: unknown;
   handler: ToolHandler;
 };
 
@@ -37,7 +37,12 @@ export type ToolDefinition = {
  * Tool registry interface
  */
 export interface ToolRegistry {
-  register(name: string, description: string, inputSchema: any, handler: ToolHandler): void;
+  register(
+    name: string,
+    description: string,
+    inputSchema: any,
+    handler: ToolHandler,
+  ): void;
   list(): ToolDefinition[];
   get(name: string): ToolDefinition | undefined;
 }

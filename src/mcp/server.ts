@@ -1,106 +1,142 @@
-import { 
-  ServerInfo, 
-  ServerConfig, 
-  Transport, 
-  ListToolsRequestSchema, 
-  CallToolRequestSchema,
-  ListToolsResponse,
-  CallToolResponse
+import type {
+  JSONRPCRequest,
+  JSONRPCResponse,
+  JSONRPCErrorResponse,
+  ServerInterface, // Import local interface
+  Transport,
 } from './types';
 
+// Define more specific types if needed, or use Record<string, unknown>
+interface ServerInfo {
+  name: string;
+  version: string;
+  capabilities: Record<string, unknown>;
+}
+type ServerConfig = Record<string, unknown>;
+
 /**
- * Custom MCP Server implementation
+ * Custom MCP Server implementation adhering to ServerInterface
  */
-export class Server {
+export class Server implements ServerInterface {
   private info: ServerInfo;
   private config: ServerConfig;
-  private requestHandlers: Map<string, (request: any) => Promise<any>> = new Map();
-  private transport: Transport | null = null;
+  // Store handlers keyed by method name
+  private requestHandlers: Map<
+    string,
+    (params: unknown, request: JSONRPCRequest) => Promise<unknown>
+  > = new Map(); // Specify handler param/return types
 
-  constructor(info: ServerInfo, config: ServerConfig) {
+  constructor(info: ServerInfo, config?: ServerConfig) {
     this.info = info;
-    this.config = config;
-    
-    // Initialize with default handlers
-    this.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: [] }));
-    this.setRequestHandler(CallToolRequestSchema, async () => {
-      throw new Error('No tool handlers registered');
-    });
+    this.config = config ?? {};
   }
 
   /**
-   * Set a request handler for a specific schema
+   * Set a request handler for a specific method name.
+   * The handler receives the validated params and the full request object.
    */
   public setRequestHandler(
-    schema: Record<string, unknown>,
-    handler: (request: any) => Promise<any>
+    schema: { method: string; params: Record<string, unknown> }, // Expect method in schema
+    handler: (params: unknown, request: JSONRPCRequest) => Promise<unknown>, // Specify handler param/return types
   ): void {
-    // For simplicity, we'll use the method name as the key
-    const method = schema.properties?.method?.enum?.[0];
-    if (typeof method !== 'string') {
-      throw new Error('Invalid schema: missing method enum');
+    if (!schema || typeof schema.method !== 'string') {
+      console.error('Invalid schema provided to setRequestHandler:', schema);
+      throw new Error('Invalid schema: missing method string');
     }
-    
-    this.requestHandlers.set(method, handler);
+    this.requestHandlers.set(schema.method, handler);
+    console.log(`[MCP Server] Registered handler for method: ${schema.method}`);
   }
 
   /**
-   * Connect to a transport
+   * Connect to a transport (called by the transport itself during SSE setup).
+   * This fulfills the Transport.connect(server) call.
    */
   public async connect(transport: Transport): Promise<void> {
-    this.transport = transport;
+    // The server doesn't store the transport per se;
+    // it's passed in during receiveRequest for the specific session.
+    console.log('[MCP Server] Transport connected for session.');
+    // It needs to call the transport's connect method to complete the handshake
+    // and allow the transport to send the initial 'endpoint' event.
     await transport.connect(this);
   }
 
   /**
-   * Handle an incoming message
+   * Receive and handle an incoming JSON-RPC request using a specific transport
+   * associated with the client's session.
    */
-  public async handleMessage(message: any): Promise<any> {
+  public async receiveRequest(
+    request: JSONRPCRequest,
+    transport: Transport,
+  ): Promise<void> {
+    const { method, params, id } = request;
+
+    if (id === undefined || id === null) {
+      console.warn(
+        '[MCP Server] Received request without ID. Ignoring notification.',
+      );
+      // MCP typically expects requests to have IDs for responses.
+      // Decide if notifications (no ID) should be handled.
+      return;
+    }
+
+    const handler = this.requestHandlers.get(method);
+
+    if (!handler) {
+      console.error(`[MCP Server] No handler for method: ${method}`);
+      const errorResponse: JSONRPCErrorResponse = {
+        jsonrpc: '2.0',
+        error: { code: -32601, message: `Method not found: ${method}` },
+        id: id,
+      };
+      await transport.sendError(errorResponse);
+      return;
+    }
+
     try {
-      // Validate the message has a method
-      if (!message.method || typeof message.method !== 'string') {
-        throw new Error('Invalid message: missing method');
-      }
+      console.log(`[MCP Server] Handling method: ${method} (ID: ${id})`);
+      // TODO: Add params validation against schema if possible/needed
+      const result = await handler(params, request); // Pass params and full request
 
-      // Get the handler for this method
-      const handler = this.requestHandlers.get(message.method);
-      if (!handler) {
-        throw new Error(`No handler registered for method: ${message.method}`);
-      }
-
-      // Call the handler
-      const response = await handler(message);
-      
-      // Send the response through the transport if available
-      if (this.transport) {
-        await this.transport.sendResponse({
-          id: message.id,
-          result: response,
-        });
-      }
-      
-      return response;
+      const response: JSONRPCResponse = {
+        jsonrpc: '2.0',
+        result: result,
+        id: id,
+      };
+      await transport.sendResponse(response);
+      console.log(
+        `[MCP Server] Sent response for method: ${method} (ID: ${id})`,
+      );
     } catch (error) {
-      // Send the error through the transport if available
-      if (this.transport) {
-        await this.transport.sendError(error instanceof Error ? error : new Error(String(error)));
+      console.error(
+        `[MCP Server] Error handling method ${method} (ID: ${id}):`,
+        error,
+      );
+      let errorMessage = 'Internal server error';
+      const errorCode = -32000; // Generic server error;
+
+      if (error instanceof Error) {
+        errorMessage = error.message;
+        // Check for specific error types or codes if needed
       }
-      throw error;
+
+      const errorResponse: JSONRPCErrorResponse = {
+        jsonrpc: '2.0',
+        error: { code: errorCode, message: errorMessage },
+        id: id,
+      };
+      await transport.sendError(errorResponse);
     }
   }
 
   /**
-   * Get server info
+   * Get server info - fulfills ServerInterface
    */
   public getInfo(): ServerInfo {
     return this.info;
   }
 
-  /**
-   * Get server config
-   */
+  // Not part of ServerInterface, but might be useful internally
   public getConfig(): ServerConfig {
     return this.config;
   }
 }
-
