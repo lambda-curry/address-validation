@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { mcpService } from '../mcp/service'; // Corrected path
 import type { Bindings } from '../api'; // Import shared Bindings
-import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
+import { StreamableHTTPServerTransport } from '../mcp/streamableHttp';
 
 // --- Hono Router Setup ---
 const mcpRoutes = new Hono<{ Bindings: Bindings }>();

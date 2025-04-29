@@ -1,8 +1,8 @@
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { Server } from './server';
 import {
   ListToolsRequestSchema,
   CallToolRequestSchema,
-} from '@modelcontextprotocol/sdk/types.js';
+} from './types';
 import { toolRegistry, registerAllTools } from '../tools'; // Assuming tools are in ../tools
 import type { Context } from 'hono';
 
