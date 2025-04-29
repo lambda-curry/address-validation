@@ -17,7 +17,13 @@ export default $config({
     const importWorker = new sst.cloudflare.Worker('ImportWorker', {
       url: false,
       link: [database],
-      handler: 'import-worker.ts',
+      handler: 'src/import-worker.ts',
+      transform: {
+        worker: {
+          compatibilityDate: '2025-04-28',
+          compatibilityFlags: ['nodejs_compat_v2'],
+        },
+      },
     });
 
     const binding = sst.cloudflare.binding({
@@ -31,14 +37,26 @@ export default $config({
       schedules: ['0 0 * * *'],
       job: {
         link: [database, API_KEY, importWorker, binding],
-        handler: 'daily-import.ts',
+        handler: 'src/daily-import.ts',
+        transform: {
+          worker: {
+            compatibilityDate: '2025-04-28',
+            compatibilityFlags: ['nodejs_compat_v2'],
+          },
+        },
       },
     });
 
     const hono = new sst.cloudflare.Worker('Hono', {
       url: true,
       link: [database, API_KEY, importWorker, binding],
-      handler: 'api.ts',
+      handler: 'src/api.ts',
+      transform: {
+        worker: {
+          compatibilityDate: '2025-04-28',
+          compatibilityFlags: ['nodejs_compat_v2'],
+        },
+      },
       domain:
         $app.stage === 'production'
           ? 'address-validation.lambdacurry.dev'

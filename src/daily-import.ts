@@ -7,7 +7,6 @@ type ENV = {
 };
 export default {
   async scheduled(event: unknown, env: ENV, ctx: unknown) {
-    console.log('env');
     for (const country of countries) {
       await env.ImportWorker.importCountryData(country.country_code);
     }
