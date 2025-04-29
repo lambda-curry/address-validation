@@ -1,4 +1,4 @@
-import type { ExecutionContext, MessageBatch } from '@cloudflare/workers-types';
+import type { ExecutionContext } from '@cloudflare/workers-types';
 import { importData } from './import-data';
 import { Resource } from 'sst';
 export default {

@@ -1,8 +1,8 @@
 import { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
-import { ToolDefinition, ToolHandler, ToolResponse } from './types';
+import type { ToolDefinition, ToolHandler } from './types';
 import { Resource } from 'sst';
-import { Context } from 'hono';
+import type { Context } from 'hono';
 
 /**
  * Get postal code information by code

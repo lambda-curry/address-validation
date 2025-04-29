@@ -43,5 +43,4 @@ Thumbs.db
 
 .sst
 .wrangler
-sst-env.d.ts
 .build

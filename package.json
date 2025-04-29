@@ -1,10 +1,10 @@
 {
   "name": "address-validation-api",
-  "module": "api.ts",
+  "module": "src/api.ts",
   "type": "module",
   "private": true,
   "scripts": {
-    "start": "bun run --watch api.ts",
+    "start": "bun run --watch src/api.ts",
     "dev": "sst dev",
     "build": "sst build",
     "deploy": "sst deploy"
@@ -21,11 +21,9 @@
     "typescript": "^5.8.3"
   },
   "dependencies": {
-    "@hono/node-server": "^1.14.1",
     "@modelcontextprotocol/inspector": "^0.10.2",
-    "@modelcontextprotocol/sdk": "^1.4.1",
+    "@modelcontextprotocol/sdk": "^1.10.2",
     "cloudflare": "^4.2.0",
-    "dotenv": "^16.5.0",
     "hono": "^4.7.7",
     "jszip": "^3.10.1",
     "sst": "^3.13.17",
