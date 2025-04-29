@@ -47,21 +47,37 @@ app.use(
 // API Key Validation Middleware
 // Apply this *before* mounting routes that need protection
 // Or apply within specific route modules if needed granularly
-app.use('*', async (c, next) => {
-  // Skip API key check for base routes (/, /health) and the MCP route (/mcp)
-  // Use startsWith to cover all sub-paths under /mcp if necessary, but exact match is likely sufficient here.
-  const publicPaths = ['/', '/health', '/mcp'];
-  if (publicPaths.some((p) => c.req.path === p)) {
+app.use('*' /* Applies to all paths */, async (c, next) => {
+  // Check if the request path starts with any of the public prefixes
+  const publicPrefixes = ['/', '/health', '/mcp/']; // Include base, health, and the MCP prefix
+
+  // Special case for exact match on root path '/'
+  if (c.req.path === '/') {
     await next();
     return;
   }
 
+  // Check prefixes for other paths (ensure trailing slash on prefixes if needed)
+  const isPublicPath = publicPrefixes.some((prefix) => {
+    // Avoid matching just '/' prefix for non-root paths unless intended
+    if (prefix === '/' && c.req.path !== '/') return false;
+    return c.req.path.startsWith(prefix);
+  });
+
+  if (isPublicPath) {
+    await next();
+    return;
+  }
+
+  // If not a public path, proceed with API key validation
   const apiKey = c.req.header('x-api-key') || c.req.query('api_key');
 
   if (!apiKey || apiKey !== Resource.API_KEY.value) {
+    console.warn(`[Auth] Invalid API key attempt for path: ${c.req.path}`);
     return c.json({ error: 'Invalid or missing API key' }, 401);
   }
 
+  console.log(`[Auth] API key validated for path: ${c.req.path}`);
   await next();
 });
 

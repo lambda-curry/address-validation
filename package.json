@@ -5,22 +5,25 @@
   "private": true,
   "scripts": {
     "start": "bun run --watch src/api.ts",
-    "dev": "sst dev",
+    "dev": "bunx wrangler deploy && sst dev --stage lambdacurry2",
     "build": "sst build",
-    "deploy": "sst deploy"
+    "deploy:sst": "sst deploy --stage lambdacurry2",
+    "deploy:do": "bunx wrangler deploy",
+    "deploy": "bun run deploy:sst && bun run deploy:do"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
     "@cloudflare/workers-types": "^4.20250424.0",
     "@types/bun": "latest",
     "@types/node": "^22.14.0",
-    "@types/uuid": "^9.0.8"
+    "@types/uuid": "^9.0.8",
+    "typescript": "^5.8.3",
+    "wrangler": "^3.0.0"
   },
   "peerDependencies": {
     "typescript": "^5.8.3"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.10.2",
     "cloudflare": "^4.2.0",
     "hono": "^4.7.7",
     "jszip": "^3.10.1",

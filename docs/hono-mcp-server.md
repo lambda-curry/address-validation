@@ -9,9 +9,11 @@ This document serves as the single source of truth for setting up, developing, a
 ```
 /mcp/
   routes.ts         # Route definitions: health, SSE, JSON-RPC
-  mcp.ts            # MCP server wrapper, tool registry, helpers
+  server.ts         # Custom MCP server implementation
+  service.ts        # MCP service wrapper
+  streamableHttp.ts # Custom StreamableHTTP transport
+  types.ts          # Type definitions for MCP
   /tools/           # Tool definitions and registry
-  sse.ts            # Custom SSETransport bridging MCP <-> browser EventSource
   registry.ts       # In-memory tool registry abstraction
 ```
 
@@ -41,12 +43,18 @@ router.post('/messages', messagesHandler)
 
 ```ts
 import { Hono } from 'hono';
-import { SSETransport } from './sse';
-import { mcpService } from './mcp';
+import { StreamableHTTPServerTransport } from './mcp/streamableHttp';
+import { mcpService } from './mcp/service';
 
 const app = new Hono();
 
-app.get('/sse', (c) => SSETransport.handle(c));
+app.get('/sse', (c) => {
+  const transport = new StreamableHTTPServerTransport({
+    sessionIdGenerator: () => crypto.randomUUID(),
+  });
+  return mcpService.getServerInstance().connect(transport);
+});
+
 app.post('/messages', (c) => mcpService.handleMessage(c));
 
 mcpService.init();
@@ -58,12 +66,12 @@ mcpService.init();
 
 - Install dependencies:
   ```sh
-  npm install hono @hono/node-server @modelcontextprotocol/sdk zod
+  npm install hono zod
   ```
-- Implement `SSETransport` (see [SSE docs](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events))
-- Build an `MCPService` thin wrapper around the SDK server:
+- Implement custom MCP server and transport (see our implementation in `/mcp/`)
+- Build an `MCPService` thin wrapper around the custom server:
   ```ts
-  import { Server } from '@modelcontextprotocol/sdk/server';
+  import { Server } from './mcp/server';
   const server = new Server({ name: 'My MCP' }, { capabilities: { tools: {} } });
   server.setRequestHandler(CallToolRequestSchema, ...);
   ```
@@ -83,7 +91,7 @@ mcpService.init();
 
 ## 4. Local Dev / Debugging Tips
 
-- Use [@modelcontextprotocol/inspector](https://www.npmjs.com/package/@modelcontextprotocol/inspector) proxy at `http://localhost:4200/sse` to inspect traffic
+- Use a tool like Postman or curl to test your SSE endpoint
 - Hono's dev server reloads if you pair with `tsx watch` or similar
 - Add `?sessionId=...` query param logging for easier correlation in logs
 - Use descriptive logging for SSE events and tool invocations
@@ -94,9 +102,8 @@ mcpService.init();
 
 - [Hono Documentation](https://hono.dev)
 - [Model Context Protocol Spec](https://github.com/modelcontext/protocol)
-- [MCP SDK Server Package](https://github.com/modelcontext/sdk/tree/main/packages/server)
-- [openapi2mcptools](https://www.npmjs.com/package/openapi2mcptools)
-- [Inspector CLI](https://www.npmjs.com/package/@modelcontextprotocol/inspector)
+- [Cloudflare Workers MCP](https://github.com/cloudflare/workers-mcp)
+- [Cloudflare MCP Blog Post](https://blog.cloudflare.com/model-context-protocol/)
 
 ---
 
@@ -104,17 +111,18 @@ mcpService.init();
 
 ```ts
 import { Hono } from 'hono';
-import { Server } from '@modelcontextprotocol/sdk/server';
-import { SSETransport } from './sse';
+import { Server } from './mcp/server';
+import { StreamableHTTPServerTransport } from './mcp/streamableHttp';
 
 const app = new Hono();
 const mcpServer = new Server({ name: 'Example MCP' }, { capabilities: { tools: {} } });
 
 app.get('/health', (c) => c.json({ status: 'ok', env: process.env.NODE_ENV }));
-app.get('/sse', (c) => SSETransport.handle(c, mcpServer));
-app.post('/messages', async (c) => {
-  const payload = await c.req.json();
-  return mcpServer.handleMessage(payload);
+app.post('/mcp', async (c) => {
+  const transport = new StreamableHTTPServerTransport({
+    sessionIdGenerator: () => crypto.randomUUID(),
+  });
+  return mcpServer.connect(transport);
 });
 
 export default app;
@@ -131,4 +139,4 @@ export default app;
 
 ---
 
-_Last updated: 2025-04-27_ 
+_Last updated: 2025-04-29_
