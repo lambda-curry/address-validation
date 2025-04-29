@@ -14,14 +14,12 @@
     "@cloudflare/workers-types": "^4.20250424.0",
     "@types/bun": "latest",
     "@types/node": "^22.14.0",
-    "@types/uuid": "^9.0.8",
-    "ts-node": "^10.9.2"
+    "@types/uuid": "^9.0.8"
   },
   "peerDependencies": {
     "typescript": "^5.8.3"
   },
   "dependencies": {
-    "@modelcontextprotocol/inspector": "^0.10.2",
     "@modelcontextprotocol/sdk": "^1.10.2",
     "cloudflare": "^4.2.0",
     "hono": "^4.7.7",

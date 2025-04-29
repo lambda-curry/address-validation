@@ -78,11 +78,6 @@ mcpService.init();
   MEDUSA_API_URL=http://localhost:9000
   PORT=4200
   ```
-- Run with:
-  ```sh
-  NODE_OPTIONS='--loader ts-node/esm' ts-node src/index.ts
-  # or build with tsc
-  ```
 
 ---
 

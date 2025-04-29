@@ -1,18 +1,28 @@
 /// <reference path="./.sst/platform/config.d.ts" />
+
+console.log('📜  sst.config.ts – TOP');
+
 export default $config({
   app(input) {
+    console.log('🚀  inside app()');
     return {
       name: 'address-validation-api',
       home: 'cloudflare',
       removal: input?.stage === 'production' ? 'retain' : 'remove',
-      providers: {
-        '@pulumi/cloudflare': '5.37.1',
-      },
     };
   },
   async run() {
+    console.log('🏃 inside run()');
     const API_KEY = new sst.Secret('API_KEY');
     const database = new sst.cloudflare.D1('AddressValidationDB');
+
+    const saferBufferAlias = {
+      build: {
+        esbuild: {
+          alias: { 'safer-buffer': 'node:buffer' },
+        },
+      },
+    };
 
     const importWorker = new sst.cloudflare.Worker('ImportWorker', {
       url: false,
@@ -24,6 +34,7 @@ export default $config({
           compatibilityFlags: ['nodejs_compat_v2'],
         },
       },
+      ...saferBufferAlias,
     });
 
     const binding = sst.cloudflare.binding({
@@ -44,6 +55,7 @@ export default $config({
             compatibilityFlags: ['nodejs_compat_v2'],
           },
         },
+        ...saferBufferAlias,
       },
     });
 
@@ -61,6 +73,7 @@ export default $config({
         $app.stage === 'production'
           ? 'address-validation.lambdacurry.dev'
           : undefined,
+      ...saferBufferAlias,
     });
 
     return {
